@@ -251,7 +251,7 @@ def vis_one_image_opencv(
 def vis_one_image(
         im, im_name, output_dir, boxes, segms=None, keypoints=None, thresh=0.9,
         kp_thresh=2, dpi=200, box_alpha=0.0, dataset=None, show_class=False,
-        ext='pdf'):
+        ext='jpg'):
     """Visual debugging of detections."""
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -259,12 +259,11 @@ def vis_one_image(
     if isinstance(boxes, list):
         boxes, segms, keypoints, classes = convert_from_cls_format(
             boxes, segms, keypoints)
-
     if boxes is None or boxes.shape[0] == 0 or max(boxes[:, 4]) < thresh:
         return
 
     dataset_keypoints, _ = keypoint_utils.get_keypoints()
-
+    #print('segms:{},keypoints:{}'.format(segms,keypoints))
     if segms is not None and len(segms) > 0:
         masks = mask_util.decode(segms)
 
@@ -286,6 +285,7 @@ def vis_one_image(
     sorted_inds = np.argsort(-areas)
 
     mask_color_id = 0
+    #print('vis:',boxes,classes)
     for i in sorted_inds:
         bbox = boxes[i, :4]
         score = boxes[i, -1]

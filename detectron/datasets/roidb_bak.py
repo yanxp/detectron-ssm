@@ -45,8 +45,6 @@ def combined_roidb_for_training(dataset_names, proposal_files):
             proposal_file=proposal_file,
             crowd_filter_thresh=cfg.TRAIN.CROWD_FILTER_THRESH
         )
-        # print('roidb:{},the num of roidb:{},the type of roidb:{}'.format(roidb[-1],len(roidb),type(roidb)))
-        
         if cfg.TRAIN.USE_FLIPPED:
             logger.info('Appending horizontally-flipped training examples...')
             extend_with_flipped_entries(roidb, ds)
@@ -73,70 +71,6 @@ def combined_roidb_for_training(dataset_names, proposal_files):
     _compute_and_log_stats(roidb)
 
     return roidb
-def get_training_roidb(dataset_names,proposal_files):
-
-    '''load datasets without flipped'''
-   
-    def get_roidb(dataset_name, proposal_file):
-        ds = JsonDataset(dataset_name)
-        roidb = ds.get_roidb(gt=True,proposal_file=proposal_file,crowd_filter_thresh=cfg.TRAIN.CROWD_FILTER_THRESH)
-        return roidb
-    
-    if isinstance(dataset_names, basestring):
-        dataset_names = (dataset_names, )
-    if isinstance(proposal_files, basestring):
-        proposal_files = (proposal_files, )
-    if len(proposal_files) == 0:
-        proposal_files = (None, ) * len(dataset_names)
-    
-    assert len(dataset_names) == len(proposal_files)
-    roidbs = [get_roidb(*args) for args in zip(dataset_names, proposal_files)]
-    roidb = roidbs[0]
-   
-    for r in roidbs[1:]:
-        roidb.extend(r)
-    # roidb = filter_for_training(roidb)
-   
-    return roidb
-
-def flipped_roidb_for_training(roidb):
-    """Load and concatenate roidbs for one or more datasets, along with optional
-    object proposals. The roidb entries are then prepared for use in training,
-    which involves caching certain types of metadata for each roidb entry.
-    """
-    flipped_roidb = []
-
-    for entry in roidb:
-        width = entry['width']
-        boxes = entry['boxes'].copy()
-        oldx1 = boxes[:, 0].copy()
-        oldx2 = boxes[:, 2].copy()
-        boxes[:, 0] = width - oldx2 - 1
-        boxes[:, 2] = width - oldx1 - 1
-        assert (boxes[:, 2] >= boxes[:, 0]).all()
-        flipped_entry = {}
-        dont_copy = ('boxes', 'segms', 'gt_keypoints', 'flipped')
-        for k, v in entry.items():
-            if k not in dont_copy:
-                flipped_entry[k] = v
-        flipped_entry['boxes'] = boxes
-        flipped_entry['segms'] = segm_utils.flip_segms(
-            entry['segms'], entry['height'], entry['width']
-        )
-        flipped_entry['flipped'] = True
-        flipped_roidb.append(flipped_entry)
-    roidb.extend(flipped_roidb)
-    
-    logger.info('Computing bounding-box regression targets...')
-    roidb = filter_for_training(roidb)
-
-    add_bbox_regression_targets(roidb)
-    logger.info('done')
-
-    _compute_and_log_stats(roidb)
-
-    return roidb
-
 
 
 def extend_with_flipped_entries(roidb, dataset):
